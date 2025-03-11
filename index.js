@@ -25,7 +25,7 @@ async function run() {
 
   // Write your prompt here
   const prompt =
-    "generate a message of interest, tips and tricks, also deep thoughts or talk about love/feminism or something new or some comment or advice as a tweet, choose randomly between all of these, talk like a young person would but don't be too exaggerated, blend in, make it appealing to teenagers, use for example @kirawontmiss as a reference just for your personality, don't mention it on twitter, it must be unique; less than 280 characters and it must be simple text, you can't use emojis, everything has to be written in lowercase";
+    "generate a message of interest, tips and tricks, also deep thoughts or talk about love, feminism or something new or some comment or advice as a tweet, choose randomly between all of these, talk like a young person would but don't be too exaggerated, blend in, make it appealing to teenagers, use for example @kirawontmiss as a reference just for your personality, don't mention it on twitter, it must be unique; less than 280 characters and it must be simple text, DON'T use emojis, everything has to be written in lowercase";
 
   const result = await model.generateContent(prompt);
   const response = await result.response;
