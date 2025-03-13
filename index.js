@@ -25,7 +25,7 @@ async function run() {
 
   // Write your prompt here
   const prompt =
-    "Generate a message of interest. Output only the chosen message, selecting randomly from: a question, a quote, a comment about love/feminism/something new, or a piece of advice. Craft it like a tweet, speaking in a relatable, casual tone appealing to teenagers (think @kirawontmiss's vibe, but don't mention her). Keep it under 280 characters, simple text, no prefixes or labels, no emojis, and all lowercase. Aim for brevity.";
+    "Generate a tweet for teenagers (think casual, relatable tone, similar to online youth culture, but without specific influencer mentions). The tweet should be under 280 characters, all lowercase, no emojis, and simple text. Choose one of these options: Question: Ask an open-ended question about current trends, relatable struggles, or social topics relevant to teens. Quote/Observation: Offer a short, insightful quote or observation about self-discovery, relationships, or personal growth. Relatable Comment: Make a brief comment about everyday life, current events, or social issues that resonates with teens (e.g., school stress, social media, identity). Quick Tip/Advice: Give a short piece of advice or a helpful tip related to self-care, productivity, or navigating social situations. Focus on topics like: Mental health: stress, anxiety, self-care; Social media: trends, online culture, digital well-being; Relationships: friendships, family, romance; Identity: self-discovery, personal growth, acceptance; Current events: relevant news, social issues, pop culture. Aim for brevity (you can choose to use almost 280 characters too sometimes) and engagement.";
 
   const result = await model.generateContent(prompt);
   const response = await result.response;
