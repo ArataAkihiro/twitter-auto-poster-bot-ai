@@ -12,7 +12,6 @@ const twitterClient = new TwitterApi({
 const generationConfig = {
   maxOutputTokens: 400,
 };
-
 const genAI = new GenAI.GoogleGenerativeAI(SECRETS.GEMINI_API_KEY);
 
 async function run() {
@@ -29,7 +28,6 @@ async function run() {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const tweetText = response.text();
-
     console.log("Generated Tweet:", tweetText);
 
     // Publicar el tweet y obtener el ID
@@ -42,12 +40,6 @@ async function run() {
         await replyWithHashtags(tweet.id, hashtags);
       }
     }
-
-    // Añadido: Responder al tweet con más visualizaciones de la timeline
-    await replyToMostViewedTimelineTweet();
-
-    // Añadido: Responder al tweet con más visualizaciones de usuarios seguidos con >10k seguidores
-    await replyToMostViewedTweetFromFollowedUsers();
   } catch (error) {
     console.error("Error in run function:", error);
   }
@@ -93,170 +85,5 @@ async function replyWithHashtags(tweetId, hashtags) {
   }
 }
 
-// Añadido: Funciones para responder al tweet con más visualizaciones de la timeline
-async function replyToMostViewedTimelineTweet() {
-  const timelineTweets = await getTimelineTweets();
+run();
 
-  if (timelineTweets && timelineTweets.length > 0) {
-    const mostViewedTweet = findMostViewedTweet(timelineTweets);
-
-    if (mostViewedTweet) {
-      const replyText = await generateReply(mostViewedTweet.text);
-      await replyToTweet(mostViewedTweet.id, replyText);
-
-      const hashtags = await generateHashtags(replyText);
-      if (hashtags) {
-        await replyWithHashtags(mostViewedTweet.id, hashtags);
-      }
-    } else {
-      console.log("No se encontraron tweets con visualizaciones.");
-    }
-  } else {
-    console.log("No se encontraron tweets en la timeline.");
-  }
-}
-
-async function getTimelineTweets() {
-  try {
-    const timeline = await twitterClient.v2.homeTimeline({
-      "tweet.fields": ["public_metrics"],
-      max_results: 10,
-    });
-    return timeline.data;
-  } catch (error) {
-    console.error("Error al obtener tweets de la timeline:", error);
-    return null;
-  }
-}
-
-function findMostViewedTweet(tweets) {
-  if (!tweets || tweets.length === 0) {
-    return null;
-  }
-
-  let mostViewed = tweets[0];
-
-  for (const tweet of tweets) {
-    if (
-      tweet.public_metrics &&
-      mostViewed.public_metrics &&
-      tweet.public_metrics.impression_count > mostViewed.public_metrics.impression_count
-    ) {
-      mostViewed = tweet;
-    }
-  }
-
-  return mostViewed;
-}
-
-async function generateReply(tweetText) {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    generationConfig,
-  });
-
-  const prompt = `Genera una respuesta corta y relevante al siguiente tweet: "${tweetText}". La respuesta debe ser concisa y adecuada para adolescentes.`;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Error al generar respuesta:", error);
-    return null;
-  }
-}
-
-async function replyToTweet(tweetId, replyText) {
-  try {
-    await twitterClient.v2.reply(replyText, tweetId);
-    console.log("Respuesta enviada con éxito!");
-  } catch (error) {
-    console.error("Error al enviar respuesta:", error);
-  }
-}
-
-// Añadido: Funciones para responder a tweets de usuarios seguidos con >10k seguidores
-async function replyToMostViewedTweetFromFollowedUsers() {
-  try {
-    // Obtener ID de usuario a partir del nombre de usuario
-    const userId = await getUserIdFromUsername("Aratawhy");
-
-    if (userId) {
-      // 1. Obtener la lista de usuarios que sigues
-      const following = await twitterClient.v2.following(userId);
-
-      if (following && following.data && following.data.length > 0) {
-        const followedUserIds = following.data.map((user) => user.id);
-
-        // 2. Obtener información de los usuarios y 3. Filtrar
-        const filteredUsers = [];
-
-        for (const userId of followedUserIds) {
-          const user = await twitterClient.v2.user(userId, { "user.fields": ["public_metrics"] });
-          if (user && user.data && user.data.public_metrics && user.data.public_metrics.followers_count > 10000) {
-            filteredUsers.push(user.data);
-          }
-        }
-
-        if (filteredUsers.length > 0) {
-          let mostViewedTweet = null;
-          let maxViews = 0;
-
-          for (const user of filteredUsers) {
-            const userTweets = await twitterClient.v2.userTimeline(user.id, {
-              "tweet.fields": ["public_metrics"],
-              max_results: 5,
-            });
-
-            if (userTweets && userTweets.data && userTweets.data.length > 0) {
-              // 5. Encontrar el tweet con más visualizaciones
-              for (const tweet of userTweets.data) {
-                if (
-                  tweet.public_metrics &&
-                  tweet.public_metrics.impression_count > maxViews
-                ) {
-                  maxViews = tweet.public_metrics.impression_count;
-                  mostViewedTweet = tweet;
-                }
-              }
-            }
-          }
-
-          if (mostViewedTweet) {
-            // 6. Generar y enviar la respuesta
-            const replyText = await generateReply(mostViewedTweet.text);
-            await replyToTweet(mostViewedTweet.id, replyText);
-
-            const hashtags = await generateHashtags(replyText);
-            if (hashtags) {
-              await replyWithHashtags(mostViewedTweet.id, hashtags);
-            }
-          } else {
-            console.log("No se encontraron tweets de usuarios seguidos con >10k seguidores.");
-          }
-        } else {
-          console.log("No se encontraron usuarios seguidos con >10k seguidores.");
-        }
-      } else {
-        console.log("No se encontraron usuarios seguidos.");
-      }
-    } else {
-      console.log("No se pudo obtener el ID de usuario.");
-    }
-  } catch (error) {
-    console.error("Error al responder a tweets de usuarios seguidos con >10k seguidores:", error);
-  }
-}
-
-async function getUserIdFromUsername(username) {
-  try {
-    const user = await twitterClient.v2.userByUsername(username);
-    return user.data.id;
-  } catch (error) {
-    console.error("Error al obtener el ID de usuario:", error);
-    return null;
-  }
-}
-
-run(); // Asegúrate de que esta línea esté presente
