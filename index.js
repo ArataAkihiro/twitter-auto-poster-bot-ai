@@ -40,6 +40,10 @@ async function run() {
         await replyWithHashtags(tweet.id, hashtags);
       }
     }
+
+    // Añadido: Responder al tweet con más visualizaciones de la timeline
+    await replyToMostViewedTimelineTweet();
+
   } catch (error) {
     console.error("Error in run function:", error);
   }
@@ -85,4 +89,86 @@ async function replyWithHashtags(tweetId, hashtags) {
   }
 }
 
-run();
+// Añadido: Funciones para responder al tweet con más visualizaciones
+async function replyToMostViewedTimelineTweet() {
+  const timelineTweets = await getTimelineTweets();
+
+  if (timelineTweets && timelineTweets.length > 0) {
+    const mostViewedTweet = findMostViewedTweet(timelineTweets);
+
+    if (mostViewedTweet) {
+      const replyText = await generateReply(mostViewedTweet.text);
+      await replyToTweet(mostViewedTweet.id, replyText);
+
+      const hashtags = await generateHashtags(replyText);
+      if (hashtags) {
+        await replyWithHashtags(mostViewedTweet.id, hashtags);
+      }
+    } else {
+      console.log("No se encontraron tweets con visualizaciones.");
+    }
+  } else {
+    console.log("No se encontraron tweets en la timeline.");
+  }
+}
+
+async function getTimelineTweets() {
+  try {
+    const timeline = await twitterClient.v2.homeTimeline({
+      "tweet.fields": ["public_metrics"],
+      max_results: 10,
+    });
+    return timeline.data;
+  } catch (error) {
+    console.error("Error al obtener tweets de la timeline:", error);
+    return null;
+  }
+}
+
+function findMostViewedTweet(tweets) {
+  if (!tweets || tweets.length === 0) {
+    return null;
+  }
+
+  let mostViewed = tweets[0];
+  for (const tweet of tweets) {
+    if (
+      tweet.public_metrics &&
+      mostViewed.public_metrics &&
+      tweet.public_metrics.impression_count >
+        mostViewed.public_metrics.impression_count
+    ) {
+      mostViewed = tweet;
+    }
+  }
+  return mostViewed;
+}
+
+async function generateReply(tweetText) {
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig,
+  });
+
+  const prompt = `Genera una respuesta corta y relevante al siguiente tweet: "${tweetText}". La respuesta debe ser concisa y adecuada para adolescentes.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error al generar respuesta:", error);
+    return null;
+  }
+}
+
+async function replyToTweet(tweetId, replyText) {
+  try {
+    await twitterClient.v2.reply(replyText, tweetId);
+    console.log("Respuesta enviada con éxito!");
+  } catch (error) {
+    console.error("Error al enviar respuesta:", error);
+  }
+}
+
+run(); // Asegúrate de que esta línea esté presente
